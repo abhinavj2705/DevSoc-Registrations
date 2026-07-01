@@ -8,7 +8,7 @@ import ArrowButton from "@/components/ui/ArrowButton";
 export default function Home() {
   return (
     <main>
-      <section className="container-main pt-28 md:pt-32">
+      <section className="container-main py-28 md:py-32">
         <motion.div variants={stagger} initial="hidden" animate="show" className="grid items-start gap-12 pt-4 lg:grid-cols-[auto_1fr] lg:gap-20">
 
           {/* Floating brand card — left */}
