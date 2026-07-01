@@ -64,7 +64,7 @@ export default function CareersPage() {
           </div>
           <button 
             onClick={() => setSearchQuery("")}
-            className="self-start rounded-md bg-[#e8f0fe] px-4 py-2 text-sm font-medium text-[#1967d2] transition hover:bg-[#d2e3fc] md:self-auto"
+            className="self-start rounded-pill border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 md:self-auto"
           >
             Clear filters
           </button>
@@ -82,7 +82,7 @@ export default function CareersPage() {
                 placeholder="What do you want to do?" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-md border border-zinc-300 bg-white p-3 text-sm text-zinc-800 shadow-sm outline-none transition focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                className="w-full rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-800 shadow-sm outline-none transition focus:border-accent"
               />
             </div>
           </aside>
@@ -97,16 +97,8 @@ export default function CareersPage() {
                 placeholder="What do you want to do?" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-md border border-zinc-300 bg-white p-3 text-sm text-zinc-800 shadow-sm outline-none transition focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8]"
+                className="w-full rounded-2xl border border-zinc-200 bg-white p-4 text-sm text-zinc-800 shadow-sm outline-none transition focus:border-accent"
               />
-            </div>
-            
-            {/* Alert Toggle Placeholder */}
-            <div className="flex items-center gap-3 text-sm text-zinc-600">
-              <div className="h-4 w-8 rounded-full bg-zinc-300 relative cursor-pointer">
-                <div className="absolute left-1 top-1 h-2 w-2 rounded-full bg-zinc-500" />
-              </div>
-              Turn on job alerts for this search
             </div>
 
             <AnimatePresence mode="popLayout">
