@@ -53,9 +53,9 @@ export default function Login() {
 
       setStatus("success");
       
-      // Redirect to dashboard after a short delay
+      // Redirect to careers page after a short delay
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push("/careers");
       }, 1000);
       
     } catch (err: any) {
