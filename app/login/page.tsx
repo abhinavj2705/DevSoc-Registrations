@@ -15,9 +15,15 @@ type Status = "idle" | "pending" | "success" | "error";
 export default function Login() {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [phone, setPhone] = useState("");
   const router = useRouter();
 
   async function handleGoogleSignIn() {
+    if (!/^\+91[\s-]?\d{10}$/.test(phone)) {
+      setError("Please enter a valid contact number starting with +91.");
+      return;
+    }
+
     setStatus("pending");
     setError(null);
 
@@ -46,6 +52,7 @@ export default function Login() {
         await setDoc(userDocRef, {
           name: user.displayName || "Unknown",
           email: email.toLowerCase(),
+          contact: phone,
           createdAt: new Date().toISOString(),
           source: "google",
         });
@@ -87,6 +94,19 @@ export default function Login() {
                 {error}
               </div>
             )}
+
+            <label className="mb-6 block text-left text-sm font-medium text-zinc-800" htmlFor="phone">
+              Contact number
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                placeholder="+91 9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="mt-2 min-h-14 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-5 text-base text-ink outline-none transition focus:border-accent"
+              />
+            </label>
 
             <button
               onClick={handleGoogleSignIn}
