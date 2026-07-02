@@ -163,12 +163,7 @@ export default function CareersPage() {
                           <MapPin size={16} className="text-zinc-400" />
                           {career.location || "Christ University"}
                         </div>
-                        {career.openings && (
-                          <div className="flex items-center gap-1.5 text-zinc-600">
-                            <Users size={16} className="text-zinc-400" />
-                            {career.openings} opening(s)
-                          </div>
-                        )}
+                        {/* Removed openings count rendering */}
                         {career.deadline && (
                           <div className="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100">
                             <Clock size={14} />

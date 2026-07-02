@@ -100,7 +100,7 @@ export function Nav() {
   }
 
   const navLinks = [];
-  if (user) navLinks.push({ label: "Open Positions", href: "/careers", requireAdmin: false });
+  if (user) navLinks.push({ label: "Campus Recruitment", href: "/careers", requireAdmin: false });
   if (isAdmin) navLinks.push({ label: "Admin", href: "/admin/dashboard", requireAdmin: true });
 
   return (

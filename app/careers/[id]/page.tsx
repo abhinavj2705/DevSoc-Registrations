@@ -204,15 +204,7 @@ export default function CareerDetailsPage() {
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <h3 className="font-bold text-ink mb-4">Role Summary</h3>
               <ul className="space-y-4">
-                {career.openings && (
-                  <li className="flex items-start gap-3">
-                    <Users size={18} className="text-zinc-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-ink">Openings</p>
-                      <p className="text-sm text-zinc-600">{career.openings} position(s)</p>
-                    </div>
-                  </li>
-                )}
+                {/* Removed openings rendering */}
                 {career.weeklyCommitment && (
                   <li className="flex items-start gap-3">
                     <Clock size={18} className="text-zinc-400 shrink-0 mt-0.5" />

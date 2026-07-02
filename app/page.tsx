@@ -78,7 +78,7 @@ export default function Home() {
             </div>
             <div className="flex flex-col items-center gap-1">
               <span className="font-display text-lg font-bold text-ink md:text-xl">Dev<span className="text-[#A8872E]">·</span>Soc</span>
-              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.3em] text-zinc-600">Careers</span>
+              <span className="font-mono text-[10px] font-medium uppercase tracking-[0.3em] text-zinc-600">Campus Recruitment</span>
             </div>
           </motion.div>
 
@@ -97,7 +97,7 @@ export default function Home() {
                 {authReady && (
                   currentUser ? (
                     <>
-                      <ArrowButton onClick={() => router.push("/careers")} label="View Open Positions" />
+                      <ArrowButton onClick={() => router.push("/careers")} label="Campus Recruitment" />
                       <ArrowButton onClick={() => router.push("/profile")} label="My Profile" variant="ghost" />
                     </>
                   ) : (

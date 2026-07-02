@@ -16,10 +16,12 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
 } from "firebase/firestore";
 
 import { reveal, stagger } from "@/lib/animations";
-import { Plus, Trash2, CheckCircle, Loader2, LogOut, FileText, Search } from "lucide-react";
+import { Plus, Trash2, CheckCircle, Loader2, LogOut, FileText, Search, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Career {
@@ -114,6 +116,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<"positions" | "applications" | "requests">("positions");
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState("");
@@ -121,6 +124,11 @@ export default function AdminDashboard() {
   const [loadingCareers, setLoadingCareers] = useState(true);
   const [loadingApplications, setLoadingApplications] = useState(true);
   const [loadingRequests, setLoadingRequests] = useState(true);
+
+  // Pagination State for Applications
+  const [lastAppDoc, setLastAppDoc] = useState<any>(null);
+  const [hasMoreApps, setHasMoreApps] = useState(true);
+  const [loadingMoreApps, setLoadingMoreApps] = useState(false);
 
   // Application Review State
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -158,10 +166,13 @@ export default function AdminDashboard() {
       setCareers(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Career[]);
       setLoadingCareers(false);
     });
-    getDocs(query(collection(db, "applications"))).then((snap) => { // orderBy("submittedAt", "desc") throws missing index if not created
+    getDocs(query(collection(db, "applications"), orderBy("submittedAt", "desc"), limit(50))).then((snap) => {
       const apps = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Application[];
-      apps.sort((a, b) => (b.submittedAt?.toMillis() || 0) - (a.submittedAt?.toMillis() || 0));
       setApplications(apps);
+      if (snap.docs.length > 0) {
+        setLastAppDoc(snap.docs[snap.docs.length - 1]);
+      }
+      setHasMoreApps(snap.docs.length === 50);
       setLoadingApplications(false);
     });
     getDocs(query(collection(db, "admin_requests"), where("status", "==", "pending"))).then((snap) => {
@@ -170,7 +181,33 @@ export default function AdminDashboard() {
     });
   }, [isAdmin]);
 
-  /* ── Create position ── */
+  /* ── Load more applications ── */
+  async function loadMoreApps() {
+    if (!lastAppDoc || !hasMoreApps || loadingMoreApps) return;
+    setLoadingMoreApps(true);
+    try {
+      const q = query(
+        collection(db, "applications"),
+        orderBy("submittedAt", "desc"),
+        startAfter(lastAppDoc),
+        limit(50)
+      );
+      const snap = await getDocs(q);
+      const newApps = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Application[];
+      
+      setApplications((prev) => [...prev, ...newApps]);
+      if (snap.docs.length > 0) {
+        setLastAppDoc(snap.docs[snap.docs.length - 1]);
+      }
+      setHasMoreApps(snap.docs.length === 50);
+    } catch (error) {
+      console.error("Error loading more applications:", error);
+    } finally {
+      setLoadingMoreApps(false);
+    }
+  }
+
+  /* ── Create or Edit position ── */
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title.trim() || form.applicableYears.length === 0) {
@@ -182,37 +219,70 @@ export default function AdminDashboard() {
     try {
       const splitLines = (str: string) => str.split("\n").map(s => s.trim()).filter(Boolean);
 
-      const newCareer = {
+      const careerData = {
         title: form.title.trim(),
         department: form.department,
         type: form.type,
         location: form.location.trim(),
         applicableYears: form.applicableYears,
         description: form.description.trim(),
-        responsibilities: splitLines(form.responsibilities),
-        qualifications: splitLines(form.qualifications),
-        preferredSkills: splitLines(form.preferredSkills),
+        responsibilities: typeof form.responsibilities === 'string' ? splitLines(form.responsibilities) : form.responsibilities,
+        qualifications: typeof form.qualifications === 'string' ? splitLines(form.qualifications) : form.qualifications,
+        preferredSkills: typeof form.preferredSkills === 'string' ? splitLines(form.preferredSkills) : form.preferredSkills,
         openings: Number(form.openings),
         deadline: form.deadline,
         weeklyCommitment: form.weeklyCommitment.trim(),
         selectionProcess: form.selectionProcess.trim(),
-        customQuestions: splitLines(form.customQuestions),
+        customQuestions: typeof form.customQuestions === 'string' ? splitLines(form.customQuestions) : form.customQuestions,
         resumeRequired: form.resumeRequired,
         status: form.status,
-        createdAt: serverTimestamp(),
       };
 
-      const ref = await addDoc(collection(db, "careers"), newCareer);
-      setCareers((prev) => [{ id: ref.id, ...newCareer } as Career, ...prev]);
+      if (editingId) {
+        await updateDoc(doc(db, "careers", editingId), careerData);
+        setCareers((prev) => prev.map((c) => (c.id === editingId ? { ...c, ...careerData } : c)));
+        setSubmitMsg("Position updated successfully!");
+      } else {
+        const newCareer = { ...careerData, createdAt: serverTimestamp() };
+        const ref = await addDoc(collection(db, "careers"), newCareer);
+        setCareers((prev) => [{ id: ref.id, ...newCareer } as Career, ...prev]);
+        setSubmitMsg("Position created successfully!");
+      }
+      
       setForm(emptyForm);
+      setEditingId(null);
       setShowForm(false);
-      setSubmitMsg("Position created successfully!");
     } catch (err) {
       console.error(err);
-      setSubmitMsg("Failed to create position. Please try again.");
+      setSubmitMsg(editingId ? "Failed to update position. Please try again." : "Failed to create position. Please try again.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  /* ── Edit position ── */
+  function handleEdit(career: Career) {
+    setForm({
+      title: career.title || "",
+      department: career.department || "Technical",
+      type: career.type || "Part-time",
+      location: career.location || "Christ University, Bengaluru",
+      applicableYears: career.applicableYears || [],
+      description: career.description || "",
+      responsibilities: career.responsibilities ? career.responsibilities.join("\n") : "",
+      qualifications: career.qualifications ? career.qualifications.join("\n") : "",
+      preferredSkills: career.preferredSkills ? career.preferredSkills.join("\n") : "",
+      openings: career.openings || 1,
+      deadline: career.deadline || "",
+      weeklyCommitment: career.weeklyCommitment || "",
+      selectionProcess: career.selectionProcess || "",
+      customQuestions: career.customQuestions ? career.customQuestions.join("\n") : "",
+      resumeRequired: career.resumeRequired ?? true,
+      status: career.status || "Published",
+    });
+    setEditingId(career.id);
+    setShowForm(true);
+    setSubmitMsg("");
   }
 
   /* ── Delete position ── */
@@ -327,7 +397,17 @@ export default function AdminDashboard() {
               <div className="mb-6 flex items-center justify-between">
                 <p className="text-sm font-medium text-zinc-500">{careers.length} position{careers.length !== 1 ? "s" : ""} listed</p>
                 <button
-                  onClick={() => setShowForm((v) => !v)}
+                  onClick={() => {
+                    if (showForm) {
+                      setShowForm(false);
+                      setEditingId(null);
+                      setForm(emptyForm);
+                    } else {
+                      setShowForm(true);
+                      setEditingId(null);
+                      setForm(emptyForm);
+                    }
+                  }}
                   className="flex items-center gap-2 rounded-pill bg-accent px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-accent/90"
                 >
                   <Plus size={16} />
@@ -351,7 +431,7 @@ export default function AdminDashboard() {
                     exit={{ opacity: 0, y: -8 }}
                     className="mb-8 rounded-[28px] bg-white p-6 sm:p-8 shadow-sm border border-zinc-100"
                   >
-                    <h2 className="font-display text-xl font-bold text-ink mb-6">Create New Position</h2>
+                    <h2 className="font-display text-xl font-bold text-ink mb-6">{editingId ? "Edit Position" : "Create New Position"}</h2>
                     <div className="grid gap-5 md:grid-cols-2">
                       <div className="flex flex-col gap-2 md:col-span-2">
                         <label className="text-sm font-semibold text-ink">Role Title <span className="text-accent">*</span></label>
@@ -446,9 +526,9 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="mt-6 flex items-center justify-end gap-3">
-                      <button type="button" onClick={() => setShowForm(false)} className="rounded-pill px-5 py-2.5 text-sm font-semibold text-zinc-500 hover:text-ink transition">Cancel</button>
+                      <button type="button" onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm); }} className="rounded-pill px-5 py-2.5 text-sm font-semibold text-zinc-500 hover:text-ink transition">Cancel</button>
                       <button type="submit" disabled={submitting} className="flex items-center gap-2 rounded-pill bg-accent px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-accent/90 disabled:opacity-60">
-                        {submitting && <Loader2 className="animate-spin" size={14} />} {submitting ? "Creating..." : "Create Position"}
+                        {submitting && <Loader2 className="animate-spin" size={14} />} {submitting ? (editingId ? "Saving..." : "Creating...") : (editingId ? "Save Changes" : "Create Position")}
                       </button>
                     </div>
                   </motion.form>
@@ -475,7 +555,10 @@ export default function AdminDashboard() {
                         </div>
                         <p className="text-sm text-zinc-500">{career.department} · {career.openings} opening(s)</p>
                       </div>
-                      <div className="flex justify-end pt-2 border-t border-zinc-100">
+                      <div className="flex justify-end pt-2 border-t border-zinc-100 gap-2">
+                        <button onClick={() => handleEdit(career)} className="grid size-9 place-items-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-ink" title="Edit">
+                          <Edit2 size={16} />
+                        </button>
                         <button onClick={() => handleDelete(career.id)} className="grid size-9 place-items-center rounded-full text-zinc-400 transition hover:bg-red-50 hover:text-red-500" title="Delete">
                           <Trash2 size={16} />
                         </button>
@@ -498,45 +581,59 @@ export default function AdminDashboard() {
                   <p className="font-medium">No applications received yet.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-[20px] border border-zinc-200 bg-white shadow-sm">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-zinc-50 text-zinc-600">
-                      <tr>
-                        <th className="px-6 py-4 font-semibold">Applicant</th>
-                        <th className="px-6 py-4 font-semibold">Role</th>
-                        <th className="px-6 py-4 font-semibold">Year</th>
-                        <th className="px-6 py-4 font-semibold">Submitted</th>
-                        <th className="px-6 py-4 font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-100">
-                      {applications.map((app) => (
-                        <tr 
-                          key={app.id} 
-                          onClick={() => { setSelectedApp(app); setAdminNotesInput(app.adminNotes || ""); }}
-                          className="group cursor-pointer hover:bg-zinc-50/80 transition"
-                        >
-                          <td className="px-6 py-4 font-medium text-ink">{app.applicantDetails.name}</td>
-                          <td className="px-6 py-4 text-zinc-600">{app.careerTitle}</td>
-                          <td className="px-6 py-4 text-zinc-500">{app.applicantDetails.year}</td>
-                          <td className="px-6 py-4 text-zinc-500">
-                            {app.submittedAt?.toDate().toLocaleDateString() || "Unknown"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={cn(
-                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                              app.status === "Selected" ? "bg-green-100 text-green-800" :
-                              app.status === "Rejected" ? "bg-red-100 text-red-800" :
-                              app.status === "Shortlisted" ? "bg-blue-100 text-blue-800" :
-                              "bg-zinc-100 text-zinc-800"
-                            )}>
-                              {app.status}
-                            </span>
-                          </td>
+                <div className="flex flex-col gap-4">
+                  <div className="overflow-x-auto rounded-[20px] border border-zinc-200 bg-white shadow-sm">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-zinc-50 text-zinc-600">
+                        <tr>
+                          <th className="px-6 py-4 font-semibold">Applicant</th>
+                          <th className="px-6 py-4 font-semibold">Role</th>
+                          <th className="px-6 py-4 font-semibold">Year</th>
+                          <th className="px-6 py-4 font-semibold">Submitted</th>
+                          <th className="px-6 py-4 font-semibold">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {applications.map((app) => (
+                          <tr 
+                            key={app.id} 
+                            onClick={() => { setSelectedApp(app); setAdminNotesInput(app.adminNotes || ""); }}
+                            className="group cursor-pointer hover:bg-zinc-50/80 transition"
+                          >
+                            <td className="px-6 py-4 font-medium text-ink">{app.applicantDetails.name}</td>
+                            <td className="px-6 py-4 text-zinc-600">{app.careerTitle}</td>
+                            <td className="px-6 py-4 text-zinc-500">{app.applicantDetails.year}</td>
+                            <td className="px-6 py-4 text-zinc-500">
+                              {app.submittedAt?.toDate().toLocaleDateString() || "Unknown"}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={cn(
+                                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                                app.status === "Selected" ? "bg-green-100 text-green-800" :
+                                app.status === "Rejected" ? "bg-red-100 text-red-800" :
+                                app.status === "Shortlisted" ? "bg-blue-100 text-blue-800" :
+                                "bg-zinc-100 text-zinc-800"
+                              )}>
+                                {app.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {hasMoreApps && (
+                    <div className="flex justify-center mt-4 mb-4">
+                      <button 
+                        onClick={loadMoreApps} 
+                        disabled={loadingMoreApps}
+                        className="rounded-pill bg-white border border-zinc-200 px-6 py-2 text-sm font-semibold text-zinc-600 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {loadingMoreApps && <Loader2 className="animate-spin" size={14} />}
+                        {loadingMoreApps ? "Loading..." : "Load More"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>

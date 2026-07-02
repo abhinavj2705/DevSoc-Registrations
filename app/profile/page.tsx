@@ -73,9 +73,6 @@ export default function ProfilePage() {
               <p className="text-zinc-500 font-mono text-sm">{profile?.email}</p>
             </div>
             
-            <Button variant="secondary" onClick={handleLogout} icon={false} className="self-start md:self-auto">
-              Sign Out
-            </Button>
           </motion.div>
 
           <motion.div variants={reveal} className="mt-8 flex gap-1 rounded-2xl bg-zinc-50 p-1 border border-zinc-100 w-fit">
@@ -191,6 +188,15 @@ export default function ProfilePage() {
             )}
           </AnimatePresence>
           
+          <motion.div variants={reveal} className="mt-12 flex justify-end border-t border-zinc-100 pt-8">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-pill border border-red-200 bg-red-50/30 px-6 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+            >
+              Sign Out
+            </button>
+          </motion.div>
+
         </motion.div>
       </div>
     </main>

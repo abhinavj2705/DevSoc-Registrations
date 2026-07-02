@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "DevSoc Registrations",
+  title: "DevSoc Campus Recruitment",
   description: "Register for Developer Society, Christ University."
 };
 
@@ -24,7 +24,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} data-scroll-behavior="smooth">
       <body className="overflow-x-clip">
         <Nav />
         {children}
