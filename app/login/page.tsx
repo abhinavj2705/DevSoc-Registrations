@@ -45,7 +45,7 @@ export default function Login() {
       }
 
       // Check if user document exists in Firestore, if not create a minimal one
-      const userDocRef = doc(db, "users", email.toLowerCase());
+      const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
