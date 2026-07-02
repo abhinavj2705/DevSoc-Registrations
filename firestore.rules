@@ -10,11 +10,16 @@ service cloud.firestore {
     }
 
     // Users: any authenticated user can read any user doc
-    // (needed for admin role checks + profile lookups)
-    // Only the user themselves or an admin can write
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Users can only create their own document if they set their role to user
+      allow create: if request.auth != null && request.auth.uid == userId 
+                    && request.resource.data.role == "user";
+      // Users can only update their own document if they don't change their role
+      allow update: if request.auth != null && request.auth.uid == userId 
+                    && request.resource.data.role == resource.data.role;
+      // Admins can manage all users
+      allow delete, update, create: if isAdmin();
     }
 
     // Careers: anyone can read, only admins can write
@@ -23,9 +28,9 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Admin requests: anyone authenticated can create their own; only admins can read/update
+    // Admin requests: Users can only create requests for their own email
     match /admin_requests/{requestId} {
-      allow create: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.email == request.auth.token.email;
       allow read, update, delete: if isAdmin();
     }
   }

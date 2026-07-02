@@ -68,8 +68,7 @@ export default function AdminLogin() {
           <motion.form
             variants={reveal}
             initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.25 }}
+            animate="show"
             onSubmit={onSubmit}
             className="mx-auto mt-12 max-w-[600px] rounded-[28px] bg-white p-8 shadow-[0_4px_48px_rgba(0,0,0,0.07)] md:p-10"
             noValidate
@@ -158,8 +157,8 @@ export default function AdminLogin() {
                   : "Request Access"}
             </button>
             <p className="mt-6 text-center text-sm text-zinc-500">
-              <a href="/register" className="font-semibold text-accent underline-offset-4 hover:underline">
-                Back to Registration
+              <a href="/login" className="font-semibold text-accent underline-offset-4 hover:underline">
+                Back to Login
               </a>
             </p>
           </motion.form>

@@ -63,27 +63,7 @@ export const floatPillIntro: Variants = {
   show: { opacity: 1, y: 0, transition: { ...springSnappy, delay: 2 } }
 };
 
-export const accordionContent: Variants = {
-  collapsed: {
-    height: 0,
-    opacity: 0,
-    transition: { duration: 0.3, ease: [0.44, 0, 0.56, 1] }
-  },
-  open: {
-    height: "auto",
-    opacity: 1,
-    transition: { duration: 0.35, ease: [0.44, 0, 0.56, 1] }
-  }
-};
 
-export const hoverLift = {
-  whileHover: { y: -4, scale: 1.01, transition: tweenSoft },
-  whileTap: { scale: 0.985, transition: { duration: 0.12 } }
-};
-
-export const hoverCard = {
-  whileHover: { y: -6, transition: springSoft }
-};
 
 export const wordReveal: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -99,15 +79,7 @@ export const wordParent: Variants = {
   show: { transition: { staggerChildren: 0.05 } }
 };
 
-export const iconPop = {
-  whileHover: { scale: 1.12, rotate: 6, transition: { duration: 0.2 } },
-  whileTap: { scale: 0.95 }
-};
 
-export const socialChild: Variants = {
-  hidden: { opacity: 0, y: 12, scale: 0.9 },
-  show: { opacity: 1, y: 0, scale: 1, transition: springSoft }
-};
 
 export const reveal: Variants = {
   hidden: { opacity: 0, y: 32 },

@@ -61,9 +61,13 @@ export default function Login() {
 
       setStatus("success");
       
-      // Redirect to careers page after a short delay
+      // Redirect appropriately based on onboarding status
       setTimeout(() => {
-        router.push("/careers");
+        if (userDocSnap.exists() && userDocSnap.data().onboardingCompleted) {
+          router.push("/careers");
+        } else {
+          router.push("/onboarding");
+        }
       }, 1000);
       
     } catch (err: any) {
@@ -86,8 +90,7 @@ export default function Login() {
           <motion.div
             variants={reveal}
             initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.25 }}
+            animate="show"
             className="mx-auto mt-12 max-w-[400px] rounded-[28px] bg-white p-8 text-center shadow-[0_4px_48px_rgba(0,0,0,0.07)] md:p-10"
           >
             {error && (
