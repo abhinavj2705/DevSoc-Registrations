@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { Loader2, ArrowLeft, CheckCircle2, ChevronRight, FileText } from "lucide-react";
@@ -17,6 +17,7 @@ export default function ApplyPage() {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [hasApplied, setHasApplied] = useState(false);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
   
   const [step, setStep] = useState<"form" | "review" | "success">("form");
   const [submitting, setSubmitting] = useState(false);
@@ -54,7 +55,10 @@ export default function ApplyPage() {
         // 3. Check if already applied
         const q = query(collection(db, "applications"), where("userId", "==", u.uid), where("careerId", "==", id));
         const snap = await getDocs(q);
-        if (!snap.empty) setHasApplied(true);
+        if (!snap.empty) {
+          setHasApplied(true);
+          setApplicationId(snap.docs[0].id);
+        }
         
       } catch (error) {
         console.error(error);
@@ -102,12 +106,31 @@ export default function ApplyPage() {
         status: "Submitted",
         submittedAt: serverTimestamp(),
       });
+      setApplicationId(docRef.id);
       setStep("success");
     } catch (error) {
       console.error(error);
       alert("Failed to submit application. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!applicationId) return;
+    if (!confirm("Are you sure you want to withdraw your application? This action cannot be undone.")) return;
+    
+    try {
+      setLoading(true);
+      await deleteDoc(doc(db, "applications", applicationId));
+      setHasApplied(false);
+      setApplicationId(null);
+      setStep("form");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to withdraw application.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,9 +147,15 @@ export default function ApplyPage() {
           </div>
           <h1 className="font-display text-2xl font-bold text-ink mb-2">Application Submitted</h1>
           <p className="text-sm text-zinc-500 mb-8">You have successfully applied for <strong>{career?.title}</strong>. We will review your application and get back to you soon.</p>
-          <Link href="/profile" className="inline-block w-full rounded-pill bg-accent px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-accent/90 transition">
+          <Link href="/profile" className="inline-block w-full rounded-pill bg-accent px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-accent/90 transition mb-3">
             View My Applications
           </Link>
+          <button 
+            onClick={handleWithdraw}
+            className="w-full rounded-pill border border-red-200 bg-red-50/30 px-6 py-3 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+          >
+            Withdraw Application
+          </button>
         </div>
       </main>
     );
