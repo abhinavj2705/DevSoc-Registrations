@@ -65,7 +65,7 @@ export default function Home() {
   return (
     <main>
       {/* Hero Section matching DevSoc Website */}
-      <section className="container-main pt-12 md:pt-32 pb-24 md:pb-40">
+      <section className="container-main pt-36 md:pt-40 pb-24 md:pb-40">
         <motion.div variants={stagger} initial="hidden" animate="show" className="grid items-start gap-12 pt-4 lg:grid-cols-[auto_1fr] lg:gap-20">
           
           {/* Floating brand card — left */}
@@ -92,17 +92,23 @@ export default function Home() {
             <motion.p variants={reveal} className="mt-6 text-[clamp(1rem,3vw,1.25rem)] text-zinc-600 max-w-2xl mx-auto lg:mx-0">
               We are a collective of developers, designers, and innovators at Christ University building real-world software and pushing boundaries.
             </motion.p>
-            <motion.div variants={reveal} className="mt-8 flex flex-wrap items-center justify-center gap-4 lg:mt-10 lg:justify-start" style={{ minHeight: 56 }}>
-              {authReady && (
-                currentUser ? (
-                  <>
-                    <ArrowButton onClick={() => router.push("/careers")} label="View Open Positions" />
-                    <ArrowButton onClick={() => router.push("/profile")} label="My Profile" variant="ghost" />
-                  </>
-                ) : (
-                  <ArrowButton onClick={handleLogin} label={loading ? "Connecting..." : "Login with Google"} />
-                )
-              )}
+            <motion.div variants={reveal} className="mt-8 flex flex-col items-center justify-center lg:items-start lg:justify-start gap-5 lg:mt-10" style={{ minHeight: 56 }}>
+              <div className="flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+                {authReady && (
+                  currentUser ? (
+                    <>
+                      <ArrowButton onClick={() => router.push("/careers")} label="View Open Positions" />
+                      <ArrowButton onClick={() => router.push("/profile")} label="My Profile" variant="ghost" />
+                    </>
+                  ) : (
+                    <ArrowButton onClick={handleLogin} label={loading ? "Authenticating..." : "Login with Christ ID"} />
+                  )
+                )}
+              </div>
+              
+              <a href="https://dev-society-website.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-zinc-500 hover:text-ink transition flex items-center gap-1.5 mt-2">
+                Explore DevSoc Main Website <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              </a>
             </motion.div>
           </div>
         </motion.div>

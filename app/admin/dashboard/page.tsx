@@ -10,16 +10,16 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  getDoc,
   onSnapshot,
   updateDoc,
   serverTimestamp,
   query,
   where,
+  orderBy,
 } from "firebase/firestore";
 
 import { reveal, stagger } from "@/lib/animations";
-import { Plus, Trash2, CheckCircle, ChevronDown, ChevronUp, Loader2, LogOut } from "lucide-react";
+import { Plus, Trash2, CheckCircle, Loader2, LogOut, FileText, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Career {
@@ -30,9 +30,43 @@ interface Career {
   location: string;
   applicableYears: string[];
   description: string;
+  responsibilities: string[];
   qualifications: string[];
+  preferredSkills: string[];
+  openings: number;
+  deadline: string;
+  weeklyCommitment: string;
+  selectionProcess: string;
+  customQuestions: string[];
   resumeRequired: boolean;
+  status: string;
   createdAt?: any;
+}
+
+interface Application {
+  id: string;
+  userId: string;
+  careerId: string;
+  careerTitle: string;
+  applicantDetails: {
+    name: string;
+    email: string;
+    studentId?: string;
+    course: string;
+    year: string;
+    phone: string;
+    alternateEmail?: string;
+  };
+  professionalLinks: {
+    resumeLink: string;
+    github?: string;
+    linkedin?: string;
+    portfolio?: string;
+  };
+  customAnswers?: Record<string, string>;
+  status: string;
+  submittedAt?: any;
+  adminNotes?: string;
 }
 
 interface AdminRequest {
@@ -47,6 +81,7 @@ interface AdminRequest {
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
 const DEPARTMENTS = ["Technical", "Design", "Management", "Content", "Operations"];
+const APPLICATION_STATUSES = ["Submitted", "Under Review", "Shortlisted", "Interview Scheduled", "Selected", "Rejected"];
 
 const emptyForm = {
   title: "",
@@ -55,8 +90,16 @@ const emptyForm = {
   location: "Christ University, Bengaluru",
   applicableYears: [] as string[],
   description: "",
+  responsibilities: "",
   qualifications: "",
+  preferredSkills: "",
+  openings: 1,
+  deadline: "",
+  weeklyCommitment: "",
+  selectionProcess: "",
+  customQuestions: "",
   resumeRequired: true,
+  status: "Published",
 };
 
 export default function AdminDashboard() {
@@ -65,8 +108,10 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [careers, setCareers] = useState<Career[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [requests, setRequests] = useState<AdminRequest[]>([]);
-  const [tab, setTab] = useState<"positions" | "requests">("positions");
+  
+  const [tab, setTab] = useState<"positions" | "applications" | "requests">("positions");
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -74,7 +119,12 @@ export default function AdminDashboard() {
   const [submitMsg, setSubmitMsg] = useState("");
 
   const [loadingCareers, setLoadingCareers] = useState(true);
+  const [loadingApplications, setLoadingApplications] = useState(true);
   const [loadingRequests, setLoadingRequests] = useState(true);
+
+  // Application Review State
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [adminNotesInput, setAdminNotesInput] = useState("");
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -83,11 +133,8 @@ export default function AdminDashboard() {
     const authUnsub = auth.onAuthStateChanged((user) => {
       if (!user) { router.replace("/"); return; }
 
-      // Real-time role check — catches the case where role was just set
       roleUnsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
         if (!snap.exists() || snap.data()?.role !== "admin") {
-          // Only redirect if we've already waited for Firestore to respond
-          // (snap.metadata.fromCache === false means it's a fresh server read)
           if (!snap.metadata.hasPendingWrites && !snap.metadata.fromCache) {
             router.replace("/");
           }
@@ -104,13 +151,18 @@ export default function AdminDashboard() {
     };
   }, [router]);
 
-
   /* ── Load data ── */
   useEffect(() => {
     if (!isAdmin) return;
     getDocs(collection(db, "careers")).then((snap) => {
       setCareers(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Career[]);
       setLoadingCareers(false);
+    });
+    getDocs(query(collection(db, "applications"))).then((snap) => { // orderBy("submittedAt", "desc") throws missing index if not created
+      const apps = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Application[];
+      apps.sort((a, b) => (b.submittedAt?.toMillis() || 0) - (a.submittedAt?.toMillis() || 0));
+      setApplications(apps);
+      setLoadingApplications(false);
     });
     getDocs(query(collection(db, "admin_requests"), where("status", "==", "pending"))).then((snap) => {
       setRequests(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as AdminRequest[]);
@@ -128,35 +180,30 @@ export default function AdminDashboard() {
     setSubmitting(true);
     setSubmitMsg("");
     try {
-      const qualList = form.qualifications
-        .split("\n")
-        .map((q) => q.trim())
-        .filter(Boolean);
-      const ref = await addDoc(collection(db, "careers"), {
+      const splitLines = (str: string) => str.split("\n").map(s => s.trim()).filter(Boolean);
+
+      const newCareer = {
         title: form.title.trim(),
         department: form.department,
         type: form.type,
         location: form.location.trim(),
         applicableYears: form.applicableYears,
         description: form.description.trim(),
-        qualifications: qualList,
+        responsibilities: splitLines(form.responsibilities),
+        qualifications: splitLines(form.qualifications),
+        preferredSkills: splitLines(form.preferredSkills),
+        openings: Number(form.openings),
+        deadline: form.deadline,
+        weeklyCommitment: form.weeklyCommitment.trim(),
+        selectionProcess: form.selectionProcess.trim(),
+        customQuestions: splitLines(form.customQuestions),
         resumeRequired: form.resumeRequired,
+        status: form.status,
         createdAt: serverTimestamp(),
-      });
-      setCareers((prev) => [
-        ...prev,
-        {
-          id: ref.id,
-          title: form.title.trim(),
-          department: form.department,
-          type: form.type,
-          location: form.location.trim(),
-          applicableYears: form.applicableYears,
-          description: form.description.trim(),
-          qualifications: qualList,
-          resumeRequired: form.resumeRequired,
-        },
-      ]);
+      };
+
+      const ref = await addDoc(collection(db, "careers"), newCareer);
+      setCareers((prev) => [{ id: ref.id, ...newCareer } as Career, ...prev]);
       setForm(emptyForm);
       setShowForm(false);
       setSubmitMsg("Position created successfully!");
@@ -175,9 +222,34 @@ export default function AdminDashboard() {
     setCareers((prev) => prev.filter((c) => c.id !== id));
   }
 
+  /* ── Update Application Status ── */
+  async function handleUpdateAppStatus(appId: string, newStatus: string) {
+    try {
+      await updateDoc(doc(db, "applications", appId), { status: newStatus });
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
+      if (selectedApp?.id === appId) setSelectedApp({ ...selectedApp, status: newStatus });
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update status");
+    }
+  }
+
+  /* ── Save Admin Notes ── */
+  async function handleSaveNotes() {
+    if (!selectedApp) return;
+    try {
+      await updateDoc(doc(db, "applications", selectedApp.id), { adminNotes: adminNotesInput });
+      setApplications(prev => prev.map(a => a.id === selectedApp.id ? { ...a, adminNotes: adminNotesInput } : a));
+      setSelectedApp({ ...selectedApp, adminNotes: adminNotesInput });
+      alert("Notes saved successfully");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save notes");
+    }
+  }
+
   /* ── Approve admin request ── */
   async function handleApprove(req: AdminRequest) {
-    // Find user by email to get uid
     const usersSnap = await getDocs(
       query(collection(db, "users"), where("email", "==", req.email.toLowerCase()))
     );
@@ -210,14 +282,13 @@ export default function AdminDashboard() {
 
   return (
     <main className="min-h-screen bg-[#f8f9fa] pt-28 pb-24">
-      <div className="container-main max-w-5xl">
-
+      <div className="container-main max-w-6xl">
         {/* Header */}
         <motion.div variants={stagger} initial="hidden" animate="show" className="mb-10">
           <motion.div variants={reveal} className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="font-mono text-xs font-semibold uppercase tracking-widest text-accent">Admin Dashboard</p>
-              <h1 className="font-display text-4xl font-bold text-ink mt-1">Manage Positions</h1>
+              <h1 className="font-display text-4xl font-bold text-ink mt-1">Recruitment Management</h1>
             </div>
             <button
               onClick={() => auth.signOut().then(() => router.push("/"))}
@@ -228,19 +299,21 @@ export default function AdminDashboard() {
           </motion.div>
 
           {/* Tabs */}
-          <motion.div variants={reveal} className="mt-8 flex gap-1 rounded-2xl bg-white p-1 shadow-sm border border-zinc-100 w-fit">
-            {(["positions", "requests"] as const).map((t) => (
+          <motion.div variants={reveal} className="mt-8 flex gap-1 rounded-2xl bg-white p-1 shadow-sm border border-zinc-100 w-fit overflow-x-auto max-w-full">
+            {(["positions", "applications", "requests"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={cn(
-                  "rounded-xl px-5 py-2.5 text-sm font-semibold transition",
+                  "rounded-xl px-5 py-2.5 text-sm font-semibold transition whitespace-nowrap",
                   tab === t
                     ? "bg-accent text-white shadow"
                     : "text-zinc-500 hover:text-ink"
                 )}
               >
-                {t === "positions" ? "Open Positions" : `Pending Requests ${requests.length ? `(${requests.length})` : ""}`}
+                {t === "positions" && "Open Positions"}
+                {t === "applications" && "Applications"}
+                {t === "requests" && `Pending Requests ${requests.length ? `(${requests.length})` : ""}`}
               </button>
             ))}
           </motion.div>
@@ -250,7 +323,6 @@ export default function AdminDashboard() {
         <AnimatePresence mode="wait">
           {tab === "positions" && (
             <motion.div key="positions" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-
               {/* Create form toggle */}
               <div className="mb-6 flex items-center justify-between">
                 <p className="text-sm font-medium text-zinc-500">{careers.length} position{careers.length !== 1 ? "s" : ""} listed</p>
@@ -280,181 +352,191 @@ export default function AdminDashboard() {
                     className="mb-8 rounded-[28px] bg-white p-6 sm:p-8 shadow-sm border border-zinc-100"
                   >
                     <h2 className="font-display text-xl font-bold text-ink mb-6">Create New Position</h2>
-
                     <div className="grid gap-5 md:grid-cols-2">
-                      {/* Role Name */}
                       <div className="flex flex-col gap-2 md:col-span-2">
-                        <label className="text-sm font-semibold text-ink" htmlFor="title">Role Name <span className="text-accent">*</span></label>
-                        <input
-                          id="title"
-                          required
-                          value={form.title}
-                          onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                          placeholder="e.g. Frontend Developer"
-                          className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
-                        />
+                        <label className="text-sm font-semibold text-ink">Role Title <span className="text-accent">*</span></label>
+                        <input required value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Frontend Developer" className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent" />
                       </div>
 
-                      {/* Department */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-sm font-semibold text-ink" htmlFor="dept">Department</label>
-                        <select
-                          id="dept"
-                          value={form.department}
-                          onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}
-                          className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
-                        >
+                        <label className="text-sm font-semibold text-ink">Department</label>
+                        <select value={form.department} onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))} className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent">
                           {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
                         </select>
                       </div>
 
-                      {/* Type */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-sm font-semibold text-ink" htmlFor="type">Type</label>
-                        <select
-                          id="type"
-                          value={form.type}
-                          onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
-                          className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
-                        >
-                          {["Part-time", "Full-time", "Volunteer", "Internship"].map((t) => <option key={t}>{t}</option>)}
+                        <label className="text-sm font-semibold text-ink">Status</label>
+                        <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))} className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent">
+                          <option>Published</option>
+                          <option>Draft</option>
+                          <option>Closed</option>
                         </select>
                       </div>
 
-                      {/* Applicable Years */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-ink">Number of Openings</label>
+                        <input type="number" min="1" value={form.openings} onChange={(e) => setForm((p) => ({ ...p, openings: Number(e.target.value) }))} className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent" />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-ink">Application Deadline</label>
+                        <input type="date" value={form.deadline} onChange={(e) => setForm((p) => ({ ...p, deadline: e.target.value }))} className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent" />
+                      </div>
+
                       <div className="flex flex-col gap-2 md:col-span-2">
                         <span className="text-sm font-semibold text-ink">Applicable Year(s) <span className="text-accent">*</span></span>
                         <div className="flex flex-wrap gap-2">
                           {YEARS.map((y) => (
-                            <button
-                              type="button"
-                              key={y}
-                              onClick={() => toggleYear(y)}
-                              className={cn(
-                                "rounded-pill px-4 py-2 text-xs font-semibold border transition",
-                                form.applicableYears.includes(y)
-                                  ? "bg-accent text-white border-accent"
-                                  : "bg-white text-zinc-600 border-zinc-200 hover:border-accent"
-                              )}
-                            >
+                            <button type="button" key={y} onClick={() => toggleYear(y)} className={cn("rounded-pill px-4 py-2 text-xs font-semibold border transition", form.applicableYears.includes(y) ? "bg-accent text-white border-accent" : "bg-white text-zinc-600 border-zinc-200 hover:border-accent")}>
                               {y}
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* Location */}
-                      <div className="flex flex-col gap-2 md:col-span-2">
-                        <label className="text-sm font-semibold text-ink" htmlFor="loc">Location</label>
-                        <input
-                          id="loc"
-                          value={form.location}
-                          onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
-                          className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
-                        />
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-ink">Type</label>
+                        <select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent">
+                          {["Part-time", "Full-time", "Volunteer", "Internship"].map((t) => <option key={t}>{t}</option>)}
+                        </select>
                       </div>
 
-                      {/* What the role looks like */}
-                      <div className="flex flex-col gap-2 md:col-span-2">
-                        <label className="text-sm font-semibold text-ink" htmlFor="desc">What does this role look like?</label>
-                        <textarea
-                          id="desc"
-                          rows={4}
-                          value={form.description}
-                          onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                          placeholder="Describe the day-to-day responsibilities, team size, tools used, what the candidate will be building or working on..."
-                          className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
-                        />
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-ink">Weekly Commitment</label>
+                        <input value={form.weeklyCommitment} onChange={(e) => setForm((p) => ({ ...p, weeklyCommitment: e.target.value }))} placeholder="e.g. 10-12 hours/week" className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent" />
                       </div>
 
-                      {/* Preferred Qualifications */}
                       <div className="flex flex-col gap-2 md:col-span-2">
-                        <label className="text-sm font-semibold text-ink" htmlFor="quals">
-                          Preferred Qualifications
-                          <span className="ml-2 font-normal text-zinc-400">(one per line)</span>
-                        </label>
-                        <textarea
-                          id="quals"
-                          rows={4}
-                          value={form.qualifications}
-                          onChange={(e) => setForm((p) => ({ ...p, qualifications: e.target.value }))}
-                          placeholder={"Experience with React or Next.js\nFamiliarity with Git and version control\nStrong communication skills"}
-                          className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent font-mono"
-                        />
+                        <label className="text-sm font-semibold text-ink">Detailed Job Description</label>
+                        <textarea rows={3} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent" />
                       </div>
 
-                      {/* Resume required toggle */}
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-ink">Responsibilities <span className="text-zinc-400 font-normal">(one per line)</span></label>
+                        <textarea rows={3} value={form.responsibilities} onChange={(e) => setForm((p) => ({ ...p, responsibilities: e.target.value }))} className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent font-mono" />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-ink">Requirements <span className="text-zinc-400 font-normal">(one per line)</span></label>
+                        <textarea rows={3} value={form.qualifications} onChange={(e) => setForm((p) => ({ ...p, qualifications: e.target.value }))} className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent font-mono" />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-ink">Preferred Skills <span className="text-zinc-400 font-normal">(one per line)</span></label>
+                        <textarea rows={3} value={form.preferredSkills} onChange={(e) => setForm((p) => ({ ...p, preferredSkills: e.target.value }))} className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent font-mono" />
+                      </div>
+
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-ink">Selection Process <span className="text-zinc-400 font-normal">(optional)</span></label>
+                        <textarea rows={2} value={form.selectionProcess} onChange={(e) => setForm((p) => ({ ...p, selectionProcess: e.target.value }))} placeholder="e.g. 1. Resume Shortlisting, 2. Technical Interview, 3. HR Round" className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent" />
+                      </div>
+
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-ink">Application Questions <span className="text-zinc-400 font-normal">(one question per line, optional)</span></label>
+                        <textarea rows={3} value={form.customQuestions} onChange={(e) => setForm((p) => ({ ...p, customQuestions: e.target.value }))} placeholder="Why do you want to join this role?&#10;Describe your relevant experience." className="resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent font-mono" />
+                      </div>
+
                       <div className="md:col-span-2">
                         <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={form.resumeRequired}
-                            onChange={(e) => setForm((p) => ({ ...p, resumeRequired: e.target.checked }))}
-                            className="h-4 w-4 rounded border-zinc-300 text-accent accent-accent"
-                          />
+                          <input type="checkbox" checked={form.resumeRequired} onChange={(e) => setForm((p) => ({ ...p, resumeRequired: e.target.checked }))} className="h-4 w-4 rounded border-zinc-300 text-accent accent-accent" />
                           <span className="text-sm font-medium text-ink">Require resume link from applicants</span>
                         </label>
-                        {form.resumeRequired && (
-                          <p className="mt-1.5 ml-7 text-xs text-zinc-400">
-                            Applicants will be asked: "Upload your resume on Google Drive and share the link."
-                          </p>
-                        )}
                       </div>
                     </div>
 
                     <div className="mt-6 flex items-center justify-end gap-3">
-                      <button type="button" onClick={() => setShowForm(false)} className="rounded-pill px-5 py-2.5 text-sm font-semibold text-zinc-500 hover:text-ink transition">
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        className="flex items-center gap-2 rounded-pill bg-accent px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-accent/90 disabled:opacity-60"
-                      >
-                        {submitting && <Loader2 className="animate-spin" size={14} />}
-                        {submitting ? "Creating..." : "Create Position"}
+                      <button type="button" onClick={() => setShowForm(false)} className="rounded-pill px-5 py-2.5 text-sm font-semibold text-zinc-500 hover:text-ink transition">Cancel</button>
+                      <button type="submit" disabled={submitting} className="flex items-center gap-2 rounded-pill bg-accent px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-accent/90 disabled:opacity-60">
+                        {submitting && <Loader2 className="animate-spin" size={14} />} {submitting ? "Creating..." : "Create Position"}
                       </button>
                     </div>
                   </motion.form>
                 )}
               </AnimatePresence>
 
-              {/* Existing positions list */}
               {loadingCareers ? (
-                <div className="flex h-40 items-center justify-center">
-                  <Loader2 className="animate-spin text-zinc-300" size={28} />
-                </div>
+                <div className="flex h-40 items-center justify-center"><Loader2 className="animate-spin text-zinc-300" size={28} /></div>
               ) : careers.length === 0 ? (
                 <div className="rounded-[28px] border border-dashed border-zinc-200 bg-white p-12 text-center text-zinc-400">
                   <Plus size={32} className="mx-auto mb-3 opacity-30" />
                   <p className="font-medium">No positions yet. Create one above.</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {careers.map((career) => (
-                    <motion.div
-                      key={career.id}
-                      variants={reveal}
-                      className="flex items-center justify-between gap-4 rounded-[20px] border border-zinc-200 bg-white px-6 py-5 shadow-sm"
-                    >
+                    <motion.div key={career.id} variants={reveal} className="flex flex-col justify-between gap-4 rounded-[20px] border border-zinc-200 bg-white px-6 py-5 shadow-sm">
                       <div className="flex flex-col gap-1 min-w-0">
-                        <p className="font-display font-bold text-ink truncate">{career.title}</p>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          <span className="rounded-pill bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">{career.department}</span>
-                          {career.applicableYears?.map((y) => (
-                            <span key={y} className="rounded-pill bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">{y}</span>
-                          ))}
+                        <div className="flex justify-between items-start">
+                          <p className="font-display font-bold text-ink truncate">{career.title}</p>
+                          <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full border", career.status === "Published" ? "bg-green-50 text-green-700 border-green-200" : "bg-zinc-100 text-zinc-600 border-zinc-200")}>
+                            {career.status}
+                          </span>
                         </div>
+                        <p className="text-sm text-zinc-500">{career.department} · {career.openings} opening(s)</p>
                       </div>
-                      <button
-                        onClick={() => handleDelete(career.id)}
-                        className="shrink-0 grid size-9 place-items-center rounded-full text-zinc-400 transition hover:bg-red-50 hover:text-red-500"
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="flex justify-end pt-2 border-t border-zinc-100">
+                        <button onClick={() => handleDelete(career.id)} className="grid size-9 place-items-center rounded-full text-zinc-400 transition hover:bg-red-50 hover:text-red-500" title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </motion.div>
                   ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ── Applications Tab ── */}
+          {tab === "applications" && (
+            <motion.div key="applications" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              {loadingApplications ? (
+                <div className="flex h-40 items-center justify-center"><Loader2 className="animate-spin text-zinc-300" size={28} /></div>
+              ) : applications.length === 0 ? (
+                <div className="rounded-[28px] border border-dashed border-zinc-200 bg-white p-12 text-center text-zinc-400">
+                  <FileText size={32} className="mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">No applications received yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-[20px] border border-zinc-200 bg-white shadow-sm">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-zinc-50 text-zinc-600">
+                      <tr>
+                        <th className="px-6 py-4 font-semibold">Applicant</th>
+                        <th className="px-6 py-4 font-semibold">Role</th>
+                        <th className="px-6 py-4 font-semibold">Year</th>
+                        <th className="px-6 py-4 font-semibold">Submitted</th>
+                        <th className="px-6 py-4 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100">
+                      {applications.map((app) => (
+                        <tr 
+                          key={app.id} 
+                          onClick={() => { setSelectedApp(app); setAdminNotesInput(app.adminNotes || ""); }}
+                          className="group cursor-pointer hover:bg-zinc-50/80 transition"
+                        >
+                          <td className="px-6 py-4 font-medium text-ink">{app.applicantDetails.name}</td>
+                          <td className="px-6 py-4 text-zinc-600">{app.careerTitle}</td>
+                          <td className="px-6 py-4 text-zinc-500">{app.applicantDetails.year}</td>
+                          <td className="px-6 py-4 text-zinc-500">
+                            {app.submittedAt?.toDate().toLocaleDateString() || "Unknown"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={cn(
+                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                              app.status === "Selected" ? "bg-green-100 text-green-800" :
+                              app.status === "Rejected" ? "bg-red-100 text-red-800" :
+                              app.status === "Shortlisted" ? "bg-blue-100 text-blue-800" :
+                              "bg-zinc-100 text-zinc-800"
+                            )}>
+                              {app.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </motion.div>
@@ -464,9 +546,7 @@ export default function AdminDashboard() {
           {tab === "requests" && (
             <motion.div key="requests" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               {loadingRequests ? (
-                <div className="flex h-40 items-center justify-center">
-                  <Loader2 className="animate-spin text-zinc-300" size={28} />
-                </div>
+                <div className="flex h-40 items-center justify-center"><Loader2 className="animate-spin text-zinc-300" size={28} /></div>
               ) : requests.length === 0 ? (
                 <div className="rounded-[28px] border border-dashed border-zinc-200 bg-white p-12 text-center text-zinc-400">
                   <CheckCircle size={32} className="mx-auto mb-3 opacity-30" />
@@ -475,25 +555,17 @@ export default function AdminDashboard() {
               ) : (
                 <div className="flex flex-col gap-4">
                   {requests.map((req) => (
-                    <div
-                      key={req.id}
-                      className="rounded-[20px] border border-zinc-200 bg-white px-6 py-5 shadow-sm"
-                    >
+                    <div key={req.id} className="rounded-[20px] border border-zinc-200 bg-white px-6 py-5 shadow-sm">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="font-semibold text-ink">{req.email}</p>
                           <p className="text-sm text-zinc-500 mt-0.5">{req.designation} · {req.organization}</p>
                         </div>
-                        <button
-                          onClick={() => handleApprove(req)}
-                          className="flex shrink-0 items-center gap-2 rounded-pill bg-green-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-green-700"
-                        >
+                        <button onClick={() => handleApprove(req)} className="flex shrink-0 items-center gap-2 rounded-pill bg-green-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-green-700">
                           <CheckCircle size={14} /> Approve
                         </button>
                       </div>
-                      {req.reason && (
-                        <p className="mt-3 text-sm leading-relaxed text-zinc-600 border-t border-zinc-100 pt-3">{req.reason}</p>
-                      )}
+                      {req.reason && <p className="mt-3 text-sm leading-relaxed text-zinc-600 border-t border-zinc-100 pt-3">{req.reason}</p>}
                     </div>
                   ))}
                 </div>
@@ -502,6 +574,110 @@ export default function AdminDashboard() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Application Review Dialog (Overlay) */}
+      <AnimatePresence>
+        {selectedApp && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedApp(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[32px] bg-white p-6 sm:p-10 shadow-2xl"
+            >
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
+                <div>
+                  <h2 className="font-display text-2xl font-bold text-ink">{selectedApp.applicantDetails.name}</h2>
+                  <p className="text-zinc-500">Applying for: <span className="font-semibold text-ink">{selectedApp.careerTitle}</span></p>
+                </div>
+                <div className="flex flex-col gap-2 min-w-[200px]">
+                  <select 
+                    value={selectedApp.status}
+                    onChange={(e) => handleUpdateAppStatus(selectedApp.id, e.target.value)}
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-medium text-ink outline-none transition focus:border-accent"
+                  >
+                    {APPLICATION_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-8 md:grid-cols-2">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-3">Applicant Info</h3>
+                    <ul className="space-y-2 text-sm text-zinc-700">
+                      <li><strong>Email:</strong> {selectedApp.applicantDetails.email}</li>
+                      <li><strong>Phone:</strong> {selectedApp.applicantDetails.phone}</li>
+                      <li><strong>Student ID:</strong> {selectedApp.applicantDetails.studentId || "N/A"}</li>
+                      <li><strong>Course:</strong> {selectedApp.applicantDetails.course}</li>
+                      <li><strong>Year:</strong> {selectedApp.applicantDetails.year}</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-3">Links</h3>
+                    <ul className="space-y-2 text-sm">
+                      {selectedApp.professionalLinks.resumeLink && (
+                        <li><a href={selectedApp.professionalLinks.resumeLink} target="_blank" rel="noreferrer" className="text-accent hover:underline font-medium">View Resume ↗</a></li>
+                      )}
+                      {selectedApp.professionalLinks.github && (
+                        <li><a href={selectedApp.professionalLinks.github} target="_blank" rel="noreferrer" className="text-accent hover:underline font-medium">GitHub ↗</a></li>
+                      )}
+                      {selectedApp.professionalLinks.linkedin && (
+                        <li><a href={selectedApp.professionalLinks.linkedin} target="_blank" rel="noreferrer" className="text-accent hover:underline font-medium">LinkedIn ↗</a></li>
+                      )}
+                      {selectedApp.professionalLinks.portfolio && (
+                        <li><a href={selectedApp.professionalLinks.portfolio} target="_blank" rel="noreferrer" className="text-accent hover:underline font-medium">Portfolio ↗</a></li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {selectedApp.customAnswers && Object.keys(selectedApp.customAnswers).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-3">Application Answers</h3>
+                      <div className="space-y-4">
+                        {Object.entries(selectedApp.customAnswers).map(([q, a]) => (
+                          <div key={q} className="rounded-xl bg-zinc-50 p-4 border border-zinc-100">
+                            <p className="text-sm font-semibold text-ink mb-1">{q}</p>
+                            <p className="text-sm text-zinc-600 whitespace-pre-wrap">{a}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-400 mb-3">Admin Notes <span className="text-xs font-normal lowercase">(Private)</span></h3>
+                    <textarea 
+                      rows={4}
+                      value={adminNotesInput}
+                      onChange={(e) => setAdminNotesInput(e.target.value)}
+                      placeholder="Add private notes about this candidate..."
+                      className="w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-ink outline-none transition focus:border-accent"
+                    />
+                    <button 
+                      onClick={handleSaveNotes}
+                      className="mt-2 rounded-pill bg-zinc-800 px-4 py-2 text-xs font-semibold text-white hover:bg-black transition"
+                    >
+                      Save Notes
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setSelectedApp(null)}
+                className="mt-8 w-full rounded-pill border border-zinc-200 py-3 text-sm font-semibold text-zinc-600 hover:bg-zinc-50 transition"
+              >
+                Close
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

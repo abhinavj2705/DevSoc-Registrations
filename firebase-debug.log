@@ -1,0 +1,75 @@
+[debug] [2026-07-02T05:25:36.436Z] ----------------------------------------------------------------------
+[debug] [2026-07-02T05:25:36.437Z] Command:       /home/mandar/.nvm/versions/node/v22.22.3/bin/node /home/mandar/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only firestore:rules
+[debug] [2026-07-02T05:25:36.437Z] CLI Version:   15.22.4
+[debug] [2026-07-02T05:25:36.437Z] Platform:      linux
+[debug] [2026-07-02T05:25:36.437Z] Node Version:  v22.22.3
+[debug] [2026-07-02T05:25:36.437Z] Detected Agent: antigravity
+[debug] [2026-07-02T05:25:36.437Z] Time:          Thu Jul 02 2026 10:55:36 GMT+0530 (India Standard Time)
+[debug] [2026-07-02T05:25:36.437Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-02T05:25:36.866Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-02T05:25:36.866Z] > authorizing via signed-in user (waigaonkarmandar@gmail.com)
+[debug] [2026-07-02T05:25:36.866Z] [iam] checking project dev-soc-registrations for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-07-02T05:25:36.867Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:25:36.867Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:25:36.867Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/dev-soc-registrations:testIamPermissions [none]
+[debug] [2026-07-02T05:25:36.867Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/dev-soc-registrations:testIamPermissions  x-goog-user-project=dev-soc-registrations
+[debug] [2026-07-02T05:25:36.867Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/dev-soc-registrations:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-07-02T05:25:46.364Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/dev-soc-registrations:testIamPermissions 200
+[debug] [2026-07-02T05:25:46.365Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/dev-soc-registrations:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'dev-soc-registrations'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-07-02T05:25:46.368Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:25:46.368Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:25:46.368Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/dev-soc-registrations/databases/(default) [none]
+[debug] [2026-07-02T05:25:48.890Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/dev-soc-registrations/databases/(default) 200
+[debug] [2026-07-02T05:25:48.890Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/dev-soc-registrations/databases/(default) {"name":"projects/dev-soc-registrations/databases/(default)","uid":"a0d1392f-7e3b-42ee-a729-47d25c0b9530","createTime":"2026-07-01T15:34:25.100836Z","updateTime":"2026-07-01T15:34:25.100836Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-07-02T04:25:48.875268Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"j","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IOXPytOgs5UDMOGo3rrpsZUD"}
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-07-02T05:25:48.891Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:25:48.891Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:25:48.891Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations:test [none]
+[debug] [2026-07-02T05:25:48.891Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations:test [omitted]
+[debug] [2026-07-02T05:26:03.210Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations:test 200
+[debug] [2026-07-02T05:26:03.210Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations:test {}
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-07-02T05:26:03.212Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:03.212Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:03.212Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/releases pageSize=10&pageToken=
+[debug] [2026-07-02T05:26:05.389Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/releases 200
+[debug] [2026-07-02T05:26:05.389Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/releases {"releases":[{"name":"projects/dev-soc-registrations/releases/cloud.firestore","rulesetName":"projects/dev-soc-registrations/rulesets/21b55ca7-2f89-4b6d-9169-e17e377e6b01","createTime":"2026-07-01T15:34:28.159500Z","updateTime":"2026-07-02T04:54:12.072971Z"}]}
+[debug] [2026-07-02T05:26:05.389Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:05.390Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:05.390Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/rulesets/21b55ca7-2f89-4b6d-9169-e17e377e6b01 [none]
+[debug] [2026-07-02T05:26:07.220Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/rulesets/21b55ca7-2f89-4b6d-9169-e17e377e6b01 200
+[debug] [2026-07-02T05:26:07.221Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/rulesets/21b55ca7-2f89-4b6d-9169-e17e377e6b01 [omitted]
+[info] i  firestore: uploading rules firestore.rules... 
+[debug] [2026-07-02T05:26:07.222Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:07.222Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:07.222Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/rulesets [none]
+[debug] [2026-07-02T05:26:07.222Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/rulesets [omitted]
+[debug] [2026-07-02T05:26:09.062Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/rulesets 200
+[debug] [2026-07-02T05:26:09.062Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/rulesets {"name":"projects/dev-soc-registrations/rulesets/806e5b90-ea6b-40f6-81da-f75906421c5d","source":{"files":[{"content":"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n\n    // Helper: check if the requesting user is an admin\n    function isAdmin() {\n      return request.auth != null\n        && exists(/databases/$(database)/documents/users/$(request.auth.uid))\n        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == \"admin\";\n    }\n\n    // Users: any authenticated user can read any user doc\n    match /users/{userId} {\n      allow read: if request.auth != null;\n      // Users can only create their own document if they set their role to user\n      allow create: if request.auth != null && request.auth.uid == userId \n                    && request.resource.data.role == \"user\";\n      // Users can only update their own document if they don't change their role\n      allow update: if request.auth != null && request.auth.uid == userId \n                    && request.resource.data.role == resource.data.role;\n      // Admins can manage all users\n      allow delete, update, create: if isAdmin();\n    }\n\n    // Careers: anyone can read, only admins can write\n    match /careers/{careerId} {\n      allow read: if true;\n      allow create, update, delete: if isAdmin();\n    }\n\n    // Admin requests: Users can only create requests for their own email\n    match /admin_requests/{requestId} {\n      allow create: if request.auth != null && request.resource.data.email == request.auth.token.email;\n      allow read, update, delete: if isAdmin();\n    }\n\n    // Applications: Users can read/write their own applications, admins can read/write all\n    match /applications/{appId} {\n      // User must be authenticated\n      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;\n      // Allow user to read/update their own application, or admins to read/update all\n      allow read, update: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());\n      // Only admins can delete\n      allow delete: if isAdmin();\n    }\n  }\n}\n\n","name":"firestore.rules"}]},"createTime":"2026-07-02T05:26:08.937711Z","metadata":{"services":["cloud.firestore"]}}
+[debug] [2026-07-02T05:26:09.063Z] [rules] created ruleset projects/dev-soc-registrations/rulesets/806e5b90-ea6b-40f6-81da-f75906421c5d
+[debug] [2026-07-02T05:26:09.063Z] [rules] releasing cloud.firestore with ruleset projects/dev-soc-registrations/rulesets/806e5b90-ea6b-40f6-81da-f75906421c5d
+[debug] [2026-07-02T05:26:09.063Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:09.063Z] Checked if tokens are valid: true, expires at: 1782971621347
+[debug] [2026-07-02T05:26:09.063Z] >>> [apiv2][query] PATCH https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/releases/cloud.firestore [none]
+[debug] [2026-07-02T05:26:09.063Z] >>> [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/releases/cloud.firestore {"release":{"name":"projects/dev-soc-registrations/releases/cloud.firestore","rulesetName":"projects/dev-soc-registrations/rulesets/806e5b90-ea6b-40f6-81da-f75906421c5d"}}
+[debug] [2026-07-02T05:26:09.791Z] <<< [apiv2][status] PATCH https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/releases/cloud.firestore 200
+[debug] [2026-07-02T05:26:09.791Z] <<< [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/dev-soc-registrations/releases/cloud.firestore {"name":"projects/dev-soc-registrations/releases/cloud.firestore","rulesetName":"projects/dev-soc-registrations/rulesets/806e5b90-ea6b-40f6-81da-f75906421c5d","createTime":"2026-07-01T15:34:28.159500Z","updateTime":"2026-07-02T05:26:09.658892Z"}
+[debug] [2026-07-02T05:26:09.791Z] [rules] updated release projects/dev-soc-registrations/releases/cloud.firestore
+[info] ✔  firestore: released rules firestore.rules to cloud.firestore 
+[info] 
+[info] ✔  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/dev-soc-registrations/overview
+[debug] [2026-07-02T05:26:19.803Z] Error: Timed out.
+    at Timeout._onTimeout (/home/mandar/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/utils.js:313:49)
+    at listOnTimeout (node:internal/timers:585:17)
+    at process.processTimers (node:internal/timers:521:7)
+[error] 
+[error] Error: An unexpected error has occurred.

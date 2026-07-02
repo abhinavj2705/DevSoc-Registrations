@@ -33,6 +33,16 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.email == request.auth.token.email;
       allow read, update, delete: if isAdmin();
     }
+
+    // Applications: Users can read/write their own applications, admins can read/write all
+    match /applications/{appId} {
+      // User must be authenticated
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Allow user to read/update their own application, or admins to read/update all
+      allow read, update: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
   }
 }
 
