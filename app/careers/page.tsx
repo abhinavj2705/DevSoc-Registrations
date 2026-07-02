@@ -41,11 +41,16 @@ export default function CareersPage() {
     fetchCareers();
   }, []);
 
-  const filteredCareers = careers.filter(career => 
-    career.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    career.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    career.department.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCareers = careers.filter(career => {
+    const title = career.title || "";
+    const location = career.location || "";
+    const dept = career.department || "";
+    const query = searchQuery.toLowerCase();
+    
+    return title.toLowerCase().includes(query) || 
+           location.toLowerCase().includes(query) ||
+           dept.toLowerCase().includes(query);
+  });
 
   return (
     <main className="min-h-screen bg-[#f8f9fa] pt-28 pb-24">
@@ -104,16 +109,20 @@ export default function CareersPage() {
             <AnimatePresence mode="popLayout">
               {loading ? (
                 <motion.div 
+                  key="loading"
                   initial={{ opacity: 0 }} 
                   animate={{ opacity: 1 }} 
+                  exit={{ opacity: 0 }}
                   className="flex h-40 items-center justify-center"
                 >
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-[#1a73e8]" />
                 </motion.div>
               ) : filteredCareers.length === 0 ? (
                 <motion.div 
+                  key="empty"
                   initial={{ opacity: 0 }} 
                   animate={{ opacity: 1 }} 
+                  exit={{ opacity: 0 }}
                   className="flex flex-col items-center justify-center rounded-2xl border border-zinc-200 bg-white p-12 text-center"
                 >
                   <Briefcase size={40} className="mb-4 text-zinc-300" />
@@ -121,7 +130,7 @@ export default function CareersPage() {
                   <p className="mt-2 text-zinc-500">Try adjusting your search or filters.</p>
                 </motion.div>
               ) : (
-                <motion.div variants={stagger} initial="hidden" animate="show" className="grid gap-6">
+                <motion.div key="list" variants={stagger} initial="hidden" animate="show" exit={{ opacity: 0 }} className="grid gap-6">
                   {filteredCareers.map((career) => (
                     <motion.article 
                       key={career.id} 
