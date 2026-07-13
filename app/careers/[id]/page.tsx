@@ -210,7 +210,7 @@ export default function CareerDetailsPage() {
                     <Clock size={18} className="text-zinc-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-ink">Commitment</p>
-                      <p className="text-sm text-zinc-600">{career.weeklyCommitment}</p>
+                      <p className="text-sm text-zinc-600">approx {career.weeklyCommitment} hrs</p>
                     </div>
                   </li>
                 )}

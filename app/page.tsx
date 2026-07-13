@@ -148,7 +148,7 @@ export default function Home() {
               { icon: <PenTool size={24} />, name: "Design", roles: "UI/UX, Graphic Design" },
               { icon: <LayoutTemplate size={24} />, name: "Management", roles: "Product, Events, Social Media" }
             ].map((team, i) => (
-              <motion.div key={i} variants={reveal} className="group relative flex flex-col items-start p-8 md:p-10 rounded-[32px] bg-zinc-50/50 border border-transparent transition-all duration-300 hover:bg-white hover:border-accent hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <motion.div key={i} variants={reveal} className="group relative flex flex-col items-center text-center p-8 md:p-10 rounded-[32px] bg-white border border-zinc-100 shadow-sm transition-all duration-300 hover:border-accent hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <div className="grid size-12 place-items-center rounded-xl bg-zinc-100 text-zinc-600 transition group-hover:bg-accent/10 group-hover:text-accent mb-6">
                   {team.icon}
                 </div>
